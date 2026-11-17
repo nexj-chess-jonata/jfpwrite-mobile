@@ -1,7 +1,6 @@
 package br.com.jfpwrite
 
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
@@ -38,9 +37,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var web: WebView
     private var dirty = false
 
-    // Respostas pendentes que o JavaScript está esperando (id -> ação)
     private var pendingOpen: String? = null
-    private var pendingSave: Triple<String, String, String>? = null // id, conteúdo, nome sugerido
+    private var pendingSave: Triple<String, String, String>? = null
     private var pendingExport: Pair<String, ByteArray>? = null
     private var fileChooserCallback: ValueCallback<Array<Uri>>? = null
 
@@ -130,7 +128,6 @@ class MainActivity : AppCompatActivity() {
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                // Primeiro deixa o editor fechar janelas e o painel de revisão.
                 web.evaluateJavascript("window.JFPMobile ? JFPMobile.back() : false") { result ->
                     if (result == "true") return@evaluateJavascript
                     if (dirty) askBeforeLeaving() else finish()
@@ -178,7 +175,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        saveLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
+        saveLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("*/*")) { uri ->
             val pending = pendingSave ?: return@registerForActivityResult
             pendingSave = null
             if (uri == null) {
@@ -216,7 +213,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // Grava texto e devolve o JSON com o "caminho" (uri#/nome) ou null.
     private fun writeText(uri: Uri, text: String): String? =
         try {
             contentResolver.openOutputStream(uri, "wt")!!.use { it.write(text.toByteArray(Charsets.UTF_8)) }
@@ -248,7 +244,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun toast(text: String) = runOnUiThread { Toast.makeText(this, text, Toast.LENGTH_LONG).show() }
 
-    // Entrega a resposta ao JavaScript. `json` já é texto JSON válido (ou null).
     private fun resolve(id: String, json: String?) {
         val arg = if (json == null) "null" else JSONObject.quote(json)
         runOnUiThread {
@@ -262,7 +257,6 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
-    /** Ponte chamada pelo mobile.js. Roda em outra thread: tudo que mexe na tela vai por runOnUiThread. */
     inner class Bridge {
         @JavascriptInterface
         fun open(id: String) {
